@@ -1,6 +1,12 @@
 Bullet
 ======
 
+NOTE : timCF add basic auth for bullet, login and password get from env this way
+
+```
+#{login := MyLogin, password := MyPassword} = application:get_env(bullet, basic_auth, nil)
+```
+
 Bullet is a Cowboy handler and associated Javascript library for
 maintaining a persistent connection between a client and a server.
 

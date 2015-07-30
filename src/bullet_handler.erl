@@ -36,6 +36,18 @@
 %% HTTP.
 
 init(Transport, Req, Opts) ->
+	case {cowboy_req:parse_header(<<"authorization">>, Req), application:get_env(bullet, basic_auth, nil)} of
+		{{ok, _, ReqN}, nil} ->
+			init_proc(Transport, ReqN, Opts);
+		{{ok, {<<"basic">>,{MyLogin,MyPassword}}, ReqN}, #{login := MyLogin,password := MyPassword}} ->
+			init_proc(Transport, ReqN, Opts);
+		{_, nil} ->
+			init_proc(Transport, Req, Opts);
+		{_,#{login := _,password := _}} ->
+			{ok, Ans} = cowboy_req:reply(401, [{<<"WWW-Authenticate">>, <<"Basic realm=\"myswt server auth\"">>},{<<"connection">>,<<"close">>}], Req),
+			{shutdown, Ans, undefined}
+	end.
+init_proc(Transport, Req, Opts) ->
 	case cowboy_req:header(<<"upgrade">>, Req) of
 		{undefined, Req2} ->
 			{Method, Req3} = cowboy_req:method(Req2),
@@ -49,6 +61,8 @@ init(Transport, Req, Opts) ->
 					{shutdown, Req3, undefined}
 			end
 	end.
+
+
 
 init(Transport, Req, Opts, <<"GET">>) ->
 	{handler, Handler} = lists:keyfind(handler, 1, Opts),
