@@ -44,7 +44,7 @@ init(Transport, Req, Opts) ->
 		{_, nil} ->
 			init_proc(Transport, Req, Opts);
 		{_,#{login := _,password := _}} ->
-			{ok, Ans} = cowboy_req:reply(401, [{<<"WWW-Authenticate">>, <<"Basic realm=\"myswt server auth\"">>},{<<"connection">>,<<"close">>}], Req),
+			{ok, Ans} = cowboy_req:reply(401, [{<<"WWW-Authenticate">>, <<"Basic realm=\"authentication required\"">>},{<<"connection">>,<<"close">>}], Req),
 			{shutdown, Ans, undefined}
 	end.
 init_proc(Transport, Req, Opts) ->
