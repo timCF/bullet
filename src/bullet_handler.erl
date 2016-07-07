@@ -121,6 +121,10 @@ info(Message, Req,
 	case Handler:info(Message, Req, HandlerState) of
 		{ok, Req2, HandlerState2} ->
 			{loop, Req2, State#state{handler_state=HandlerState2}, hibernate};
+		{shutdown, Req2, HandlerState2} ->
+			State2 = State#state{handler_state=HandlerState2},
+			{ok, Req3} = shutdown_get_mode(GetMode, Req2),
+			{ok, Req3, State2};
 		{reply, Data, Req2, HandlerState2} ->
 			State2 = State#state{handler_state=HandlerState2},
 			case reply_get_mode(GetMode, Data, Req2) of
@@ -206,14 +210,22 @@ start_get_mode(eventsource, Req) ->
 	Headers = [{<<"content-type">>, <<"text/event-stream">>}],
 	{ok, _} = cowboy_req:chunked_reply(200, Headers, Req).
 
+shutdown_get_mode(poll, Req) ->
+	cowboy_req:reply(204, [], <<"">>, Req);
+shutdown_get_mode(eventsource, Req) ->
+	{ok, Req}.
+
 reply_get_mode(poll, Data, Req) ->
 	{ok, _} = cowboy_req:reply(200, [], Data, Req);
 reply_get_mode(eventsource, Data, Req) ->
 	Bin = iolist_to_binary(Data),
 	Event = [[<<"data: ">>, Line, <<"\n">>] ||
 		Line <- binary:split(Bin, [<<"\r\n">>, <<"\r">>, <<"\n">>], [global])],
-	ok = cowboy_req:chunk([Event, <<"\n">>], Req),
-	{loop, Req}.
+    case cowboy_req:chunk([Event, <<"\n">>], Req) of
+        ok -> {loop, Req};
+        close -> {ok, Req};
+        {error, closed} -> {ok, Req}
+    end.
 
 %% Internal.
 
